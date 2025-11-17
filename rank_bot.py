@@ -4,13 +4,13 @@ import os
 SLACK_WEBHOOK = os.getenv("SLACK_WEBHOOK")
 APP_NAME = "Whatnot"
 
-COUNTRIES = ["us", "jp", "de", "gb", "fr"]
-OS_TYPES = ["iphone", "ipad", "mac"]
-TOP_N = 200
+# Top 10 countries by App Store revenue
+COUNTRIES = ["us", "jp", "de", "gb", "fr", "ca", "au", "kr", "cn", "it"]
+TOP_N = 200  # maximum apps in RSS feed
 
-def get_ranking(app_name, country, os_type):
-    url = f"https://rss.applemarketingtools.com/api/v2/{country}/apps/top-free/{TOP_N}/{os_type}-apps.json"
-    response = requests.get(url)
+def get_ranking(app_name, country):
+    rss_url = f"https://rss.applemarketingtools.com/api/v2/{country}/apps/top-free/{TOP_N}/apps.json"
+    response = requests.get(rss_url)
     data = response.json()
     apps = data.get("feed", {}).get("results", [])
     
@@ -23,15 +23,13 @@ def post_to_slack(message):
     requests.post(SLACK_WEBHOOK, json={"text": message})
 
 def main():
-    message = "📱 *Daily App Store Ranking — Whatnot (Split by OS)*"
+    message = "📱 *Daily App Store Ranking — Whatnot*"
     for country in COUNTRIES:
-        for os_type in OS_TYPES:
-            rank = get_ranking(APP_NAME, country, os_type)
-            os_label = os_type.capitalize()
-            if rank:
-                message += f"\n🇨🇦 {country.upper()} {os_label}: #{rank}"
-            else:
-                message += f"\n🇨🇦 {country.upper()} {os_label}: Not in top {TOP_N}"
+        rank = get_ranking(APP_NAME, country)
+        if rank:
+            message += f"\n🇨🇦 {country.upper()}: #{rank}"
+        else:
+            message += f"\n🇨🇦 {country.upper()}: Not in top {TOP_N}"
     
     post_to_slack(message)
 
