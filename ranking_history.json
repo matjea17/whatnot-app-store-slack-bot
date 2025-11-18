@@ -1,42 +1,72 @@
 {
   "us": {
-    "ios": null,
+    "ios": {
+      "rank": null,
+      "chart": null
+    },
     "android": null
   },
   "gb": {
-    "ios": null,
-    "android": null
-  },
-  "de": {
-    "ios": null,
+    "ios": {
+      "rank": null,
+      "chart": null
+    },
     "android": null
   },
   "fr": {
-    "ios": null,
+    "ios": {
+      "rank": null,
+      "chart": null
+    },
     "android": null
   },
-  "ca": {
-    "ios": null,
+  "be": {
+    "ios": {
+      "rank": null,
+      "chart": null
+    },
     "android": null
   },
-  "au": {
-    "ios": null,
+  "de": {
+    "ios": {
+      "rank": null,
+      "chart": null
+    },
+    "android": null
+  },
+  "at": {
+    "ios": {
+      "rank": null,
+      "chart": null
+    },
     "android": null
   },
   "nl": {
-    "ios": null,
+    "ios": {
+      "rank": null,
+      "chart": null
+    },
     "android": null
   },
-  "se": {
-    "ios": null,
+  "ca": {
+    "ios": {
+      "rank": null,
+      "chart": null
+    },
     "android": null
   },
-  "in": {
-    "ios": null,
+  "au": {
+    "ios": {
+      "rank": null,
+      "chart": null
+    },
     "android": null
   },
-  "sg": {
-    "ios": null,
+  "es": {
+    "ios": {
+      "rank": null,
+      "chart": null
+    },
     "android": null
   }
 }
