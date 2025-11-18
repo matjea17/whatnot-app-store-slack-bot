@@ -6,7 +6,7 @@ import time
 # ---------------------------
 # Configuration
 # ---------------------------
-COUNTRIES = ["us", "gb", "de", "fr", "ca", "au", "nl", "se", "in", "sg"]
+COUNTRIES = ["us", "gb”, "fr”, "be”, “de”, "at", “nl", "ca", "au", "es"]
 
 IOS_APP_ID = "1601150422"  # Whatnot iOS App ID
 ANDROID_PACKAGE = "com.whatnot.whatnot"
@@ -19,29 +19,44 @@ TIMEOUT = 10
 HEADERS = {"User-Agent": "Mozilla/5.0"}  # Avoid Apple blocking CI requests
 
 # ---------------------------
-# iOS Ranking (Apple RSS) with retries
+# iOS Ranking (check Overall + Shopping)
 # ---------------------------
 def get_ios_rank(country_code, app_id):
-    url = f"https://rss.applemarketingtools.com/api/v2/{country_code}/apps/top-free/200/apps.json"
-    for attempt in range(1, RETRIES + 1):
-        try:
-            r = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
-            r.raise_for_status()
-            if not r.text.strip():
-                raise ValueError("Empty response")
-            data = r.json()
-            apps = data.get("feed", {}).get("results", [])
-            for idx, app in enumerate(apps, start=1):
-                if str(app.get("id")) == str(app_id):
-                    return idx
-            return None  # Not found
-        except (requests.RequestException, ValueError, json.JSONDecodeError) as e:
-            print(f"[iOS] Attempt {attempt} failed for {country_code}: {e}")
-            if attempt < RETRIES:
-                print("Retrying...")
-                time.sleep(2)
-    print(f"[iOS] Failed to get rank for {country_code} after {RETRIES} attempts")
-    return None
+    charts = [
+        {"type": "top-free", "category": None, "label": "Overall Free"},
+        {"type": "top-free", "category": "shopping", "label": "Shopping"}
+    ]
+
+    for chart in charts:
+        chart_type = chart["type"]
+        category = chart["category"]
+        label = chart["label"]
+
+        # Build URL
+        if category:
+            url = f"https://rss.applemarketingtools.com/api/v2/{country_code}/apps/{chart_type}/{category}/200/apps.json"
+        else:
+            url = f"https://rss.applemarketingtools.com/api/v2/{country_code}/apps/{chart_type}/200/apps.json"
+
+        for attempt in range(1, RETRIES + 1):
+            try:
+                r = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
+                r.raise_for_status()
+                if not r.text.strip():
+                    continue
+                data = r.json()
+                apps = data.get("feed", {}).get("results", [])
+                for idx, app in enumerate(apps, start=1):
+                    if str(app.get("id")) == str(app_id):
+                        return idx, label  # rank + chart name
+                break  # exit retry loop if request successful but app not found
+            except (requests.RequestException, ValueError, json.JSONDecodeError) as e:
+                print(f"[iOS] Attempt {attempt} failed for {label} chart in {country_code}: {e}")
+                if attempt < RETRIES:
+                    time.sleep(2)
+                else:
+                    print(f"[iOS] Failed to fetch {label} chart for {country_code} after {RETRIES} attempts")
+    return None, None  # Not found in any chart
 
 # ---------------------------
 # Android Ranking (AppBrain) with retries
@@ -53,19 +68,19 @@ def get_android_rank(country_code, package):
             r = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
             r.raise_for_status()
             if not r.text.strip():
-                raise ValueError("Empty response")
+                continue
             data = r.json()
             apps = data.get("ranks", [])
             for idx, entry in enumerate(apps, start=1):
                 if entry.get("p") == package:
                     return idx
-            return None
+            break
         except (requests.RequestException, ValueError, json.JSONDecodeError) as e:
             print(f"[Android] Attempt {attempt} failed for {country_code}: {e}")
             if attempt < RETRIES:
-                print("Retrying...")
                 time.sleep(2)
-    print(f"[Android] Failed to get rank for {country_code} after {RETRIES} attempts")
+            else:
+                print(f"[Android] Failed to fetch chart for {country_code} after {RETRIES} attempts")
     return None
 
 # ---------------------------
@@ -121,25 +136,29 @@ def main():
     message_lines = ["*📈 Whatnot Daily App Rankings (with Δ)*", ""]
 
     for country in COUNTRIES:
-        ios_rank = get_ios_rank(country, IOS_APP_ID)
+        ios_rank, ios_chart = get_ios_rank(country, IOS_APP_ID)
         android_rank = get_android_rank(country, ANDROID_PACKAGE)
-
-        # Save today’s ranks
-        new_data[country] = {"ios": ios_rank, "android": android_rank}
 
         # Yesterday’s ranks
         prev = old.get(country, {})
-        ios_prev = prev.get("ios")
+        ios_prev_rank = prev.get("ios", {}).get("rank") if prev.get("ios") else None
         android_prev = prev.get("android")
 
         # Compute deltas
-        ios_delta = format_delta(ios_rank, ios_prev)
+        ios_delta = format_delta(ios_rank, ios_prev_rank)
         android_delta = format_delta(android_rank, android_prev)
+
+        # Save today’s values
+        new_data[country] = {
+            "ios": {"rank": ios_rank, "chart": ios_chart},
+            "android": android_rank
+        }
 
         # Build message line
         line = (
             f":earth_africa: *{country.upper()}*\n"
-            f"• iOS: {ios_rank if ios_rank else 'Not in top 200'} {ios_delta}\n"
+            f"• iOS ({ios_chart if ios_chart else 'Unknown'}): "
+            f"{ios_rank if ios_rank else 'Not in top 200'} {ios_delta}\n"
             f"• Android: {android_rank if android_rank else 'Not in charts'} {android_delta}\n"
         )
         message_lines.append(line)
@@ -152,4 +171,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
