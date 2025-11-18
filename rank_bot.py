@@ -6,7 +6,7 @@ import time
 # ---------------------------
 # Configuration
 # ---------------------------
-COUNTRIES = ["us", "gb”, "fr”, "be”, “de”, "at", “nl", "ca", "au", "es"]
+COUNTRIES = ["us", "gb", "fr", "be", "de", "at", "nl", "ca", "au", "es"]
 
 IOS_APP_ID = "1601150422"  # Whatnot iOS App ID
 ANDROID_PACKAGE = "com.whatnot.whatnot"
@@ -19,7 +19,7 @@ TIMEOUT = 10
 HEADERS = {"User-Agent": "Mozilla/5.0"}  # Avoid Apple blocking CI requests
 
 # ---------------------------
-# iOS Ranking (check Overall + Shopping)
+# iOS Ranking (Overall + Shopping)
 # ---------------------------
 def get_ios_rank(country_code, app_id):
     charts = [
@@ -59,7 +59,7 @@ def get_ios_rank(country_code, app_id):
     return None, None  # Not found in any chart
 
 # ---------------------------
-# Android Ranking (AppBrain) with retries
+# Android Ranking (AppBrain)
 # ---------------------------
 def get_android_rank(country_code, package):
     url = f"https://www.appbrain.com/api/chart?country={country_code}&cat=overall&format=json"
