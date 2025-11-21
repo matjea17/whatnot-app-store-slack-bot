@@ -19,58 +19,45 @@ TIMEOUT = 10
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 # ---------------------------
-# iOS Ranking (using AMP API)
+# iOS Ranking (AppStoreSpy)
 # ---------------------------
 def get_ios_rank(country_code, app_id):
     """
-    Debug-heavy version so we can see exactly what Apple AMP returns.
+    Fetch iOS ranking using AppStoreSpy free public API.
+    Checks both Shopping and Overall Free charts.
     """
 
-    BASE = f"https://amp-api.apps.apple.com/v1/catalog/{country_code}/apps/charts"
-
-    CHARTS = [
-        ("top-free", 0, "Overall Free"),
-        ("top-free", 36, "Shopping"),
+    charts = [
+        ("free", "all", "Overall Free"),
+        ("free", "shopping", "Shopping")
     ]
 
-    for chart, genre, label in CHARTS:
-        url = f"{BASE}?chart={chart}&genre={genre}&limit=200"
+    for chart_type, category, label in charts:
+        url = (
+            "https://api.appstorespy.com/public/app/charts"
+            f"?countries={country_code}&category={category}&type={chart_type}"
+        )
 
         for attempt in range(1, RETRIES + 1):
             try:
-                r = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
-                print("\n===== iOS DEBUG =====")
-                print("Country:", country_code)
-                print("Chart:", label)
-                print("URL:", url)
-                print("Status:", r.status_code)
-                print("Raw response first 300 chars:")
-                print(r.text[:300])
-                print("=====================\n")
-
+                r = requests.get(url, timeout=TIMEOUT, headers=HEADERS)
                 r.raise_for_status()
 
                 data = r.json()
-                apps = data.get("results", [])
-
-                print(f"Returned {len(apps)} apps for {label}")
-                print("First 10 IDs:", [a.get("id") for a in apps[:10]])
+                apps = data.get(country_code, [])
 
                 for idx, app in enumerate(apps, start=1):
-                    if str(app.get("id")) == str(app_id):
-                        print(f"FOUND WHATNOT at position {idx} ({label})")
+                    if str(app.get("app_id")) == str(app_id):
                         return idx, label
 
-                print(f"Whatnot NOT FOUND in {label}")
-                break
+                break  # request valid but app not found
 
             except Exception as e:
-                print(f"[iOS] Error on attempt {attempt}: {e}")
+                print(f"[iOS] Attempt {attempt} error for {label} in {country_code}: {e}")
                 if attempt < RETRIES:
                     time.sleep(2)
 
     return None, None
-
 
 # ---------------------------
 # Android Ranking (AppBrain)
@@ -102,7 +89,6 @@ def get_android_rank(country_code, package):
 
     return None
 
-
 # ---------------------------
 # Slack messaging
 # ---------------------------
@@ -114,7 +100,6 @@ def send_slack_message(text):
         requests.post(SLACK_WEBHOOK, json={"text": text})
     except Exception as e:
         print(f"Failed to send Slack message: {e}")
-
 
 # ---------------------------
 # History (load/save)
@@ -128,11 +113,9 @@ def load_history():
         except json.JSONDecodeError:
             return {}
 
-
 def save_history(data):
     with open(HISTORY_FILE, "w") as f:
         json.dump(data, f, indent=2)
-
 
 # ---------------------------
 # Delta formatting
@@ -150,14 +133,12 @@ def format_delta(today, yesterday):
     else:
         return "(➖)"
 
-
 # ---------------------------
 # Main
 # ---------------------------
 def main():
     old = load_history()
     new_data = {}
-
     message_lines = ["*📈 Whatnot Daily App Rankings (with Δ)*", ""]
 
     for country in COUNTRIES:
@@ -182,12 +163,10 @@ def main():
             f"{ios_rank if ios_rank else 'Not in top 200'} {ios_delta}\n"
             f"• Android: {android_rank if android_rank else 'Not in charts'} {android_delta}\n"
         )
-
         message_lines.append(line)
 
     send_slack_message("\n".join(message_lines))
     save_history(new_data)
-
 
 if __name__ == "__main__":
     main()
