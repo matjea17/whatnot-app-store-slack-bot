@@ -8,7 +8,7 @@ import time
 # ---------------------------
 COUNTRIES = ["us", "gb", "fr", "be", "de", "at", "nl", "ca", "au", "es"]
 
-IOS_APP_ID = "1601150422"  # Whatnot iOS App ID
+IOS_APP_ID = "1488269261"  # Whatnot iOS App ID
 ANDROID_PACKAGE = "com.whatnot.whatnot"
 
 SLACK_WEBHOOK = os.getenv("SLACK_WEBHOOK")
