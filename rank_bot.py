@@ -23,8 +23,7 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 # ---------------------------
 def get_ios_rank(country_code, app_id):
     """
-    Fetch iOS ranking using Apple's AMP charts API.
-    Checks both Overall (Free) and Shopping charts.
+    Debug-heavy version so we can see exactly what Apple AMP returns.
     """
 
     BASE = f"https://amp-api.apps.apple.com/v1/catalog/{country_code}/apps/charts"
@@ -40,34 +39,37 @@ def get_ios_rank(country_code, app_id):
         for attempt in range(1, RETRIES + 1):
             try:
                 r = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
-
-                # Debug logging
-                print("\n----- DEBUG iOS FETCH -----")
+                print("\n===== iOS DEBUG =====")
                 print("Country:", country_code)
                 print("Chart:", label)
                 print("URL:", url)
                 print("Status:", r.status_code)
-                print("Response (first 300 chars):")
+                print("Raw response first 300 chars:")
                 print(r.text[:300])
-                print("---------------------------\n")
+                print("=====================\n")
 
                 r.raise_for_status()
 
                 data = r.json()
                 apps = data.get("results", [])
 
+                print(f"Returned {len(apps)} apps for {label}")
+                print("First 10 IDs:", [a.get("id") for a in apps[:10]])
+
                 for idx, app in enumerate(apps, start=1):
                     if str(app.get("id")) == str(app_id):
-                        return idx, label  # Rank and chart name
+                        print(f"FOUND WHATNOT at position {idx} ({label})")
+                        return idx, label
 
-                break  # request succeeded but app not found
+                print(f"Whatnot NOT FOUND in {label}")
+                break
 
             except Exception as e:
-                print(f"[iOS] Attempt {attempt} failed for {label} in {country_code}: {e}")
+                print(f"[iOS] Error on attempt {attempt}: {e}")
                 if attempt < RETRIES:
                     time.sleep(2)
 
-    return None, None  # Not found
+    return None, None
 
 
 # ---------------------------
